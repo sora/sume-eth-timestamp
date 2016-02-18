@@ -6,7 +6,8 @@ import udp_pkg::*;
 module eth_send #(
 	parameter frame_len = 16'd60,
 
-	parameter eth_dst   = 48'hFF_FF_FF_FF_FF_FF,
+//    parameter eth_dst   = 48'hFF_FF_FF_FF_FF_FF,
+	parameter eth_dst   = 48'h90_E2_BA_5D_8D_C8,
 	parameter eth_src   = 48'h00_11_22_33_44_55,
 	parameter eth_proto = ETH_P_IP,
 	parameter ip_saddr  = {8'd192, 8'd168, 8'd1, 8'd111},
@@ -77,33 +78,37 @@ always_comb begin
 	tx_pkt.hdr.udp.check = 0;
 end
 
-logic [25:0] c;      //Internal counter: 156,25MHz / 2^25 = 4,656 Hz: Packet sending frequency.
+logic [27:0] counter;      //Internal counter: 156,25MHz / 2^25 = 4,656 Hz: Packet sending frequency.
 logic [31:0] packet_c;
 logic [63:0] s_axis_tx_tdata_rev;
 always_comb begin
-	if (c < 8)
-		s_axis_tx_tdata_rev = tx_pkt.raw[7 - c];
+	if (counter < 8)
+		s_axis_tx_tdata_rev = tx_pkt.raw[7 - counter];
 	else
 		s_axis_tx_tdata_rev = 64'b0;
 end
 
 always_ff @(posedge clk156) begin
 	if (reset) begin
-		c <= 26'b0;
+		counter <= 28'b0;
 		packet_c <= 32'b0;
 	end else begin
-		if (c == 9)
+        // packet counter
+		if (counter == 9)
 			packet_c <= packet_c + 1;
-		if ((c == 0) & s_axis_tx_tready | !(c == 0))
-			c <= c + 1;
+		
+		// count up	
+		counter <= counter + 1;
+        if (counter == 28'd15625000)
+            counter <= 0;
+
 	end
 end
 
 // output ports
 always_comb s_axis_tx_tdata  = endian_conv64(s_axis_tx_tdata_rev);
-always_comb s_axis_tx_tkeep  = (c < 7) ? 8'hFF : (c == 7) ? 8'b0000_1111 : 8'b0;
-always_comb s_axis_tx_tlast  = (c == 7);
-always_comb s_axis_tx_tvalid = (c < 8);
+always_comb s_axis_tx_tkeep  = (counter < 7) ? 8'hFF : (counter == 7) ? 8'b0000_1111 : 8'b0;
+always_comb s_axis_tx_tlast  = (counter == 7);
+always_comb s_axis_tx_tvalid = (counter < 8);
 
 endmodule
-

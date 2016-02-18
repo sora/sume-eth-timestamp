@@ -39,7 +39,7 @@ IBUFDS #(
 	.IB(FPGA_SYSCLK_N)
 );
 
-logic clk100;
+logic clk100, clk156;
 logic [1:0] clock_divide;
 always_ff @(posedge clk200)
 	clock_divide <= clock_divide + 2'b1;
@@ -105,7 +105,8 @@ wire tx_statistics_valid;
 
 // eth_send
 eth_send eth_send0 (
-	.clk156(clk200),
+//	.clk156(clk200),
+	.clk156(clk156),
 	.reset(sys_rst),
 	.*
 );
@@ -117,28 +118,28 @@ wire [ 7:0] m_axis_tx_tkeep;
 wire        m_axis_tx_tlast;
 wire        m_axis_tx_tuser;
 
-pcie2eth_fifo pcie2eth_fifo0 (
-	.s_aresetn(~sys_rst),
+//pcie2eth_fifo pcie2eth_fifo0 (
+//	.s_aresetn(~sys_rst),
 
-	// data in (pcie)
-	.s_aclk(clk200),
-	.s_axis_tvalid(s_axis_tx_tvalid),
-	.s_axis_tready(s_axis_tx_tready),
-	.s_axis_tdata (s_axis_tx_tdata),
-	.s_axis_tkeep (s_axis_tx_tkeep),
-	.s_axis_tlast (s_axis_tx_tlast),
-	.s_axis_tuser (s_axis_tx_tuser),
+//	// data in (pcie)
+//	.s_aclk(clk200),
+//	.s_axis_tvalid(s_axis_tx_tvalid),
+//	.s_axis_tready(s_axis_tx_tready),
+//	.s_axis_tdata (s_axis_tx_tdata),
+//	.s_axis_tkeep (s_axis_tx_tkeep),
+//	.s_axis_tlast (s_axis_tx_tlast),
+//	.s_axis_tuser (s_axis_tx_tuser),
 
-	// data out(eth)
-	.m_aclk(clk156),
-	.m_axis_tvalid(m_axis_tx_tvalid),
-	.m_axis_tready(m_axis_tx_tready),
-	.m_axis_tdata (m_axis_tx_tdata),
-	.m_axis_tkeep (m_axis_tx_tkeep),
-	.m_axis_tlast (m_axis_tx_tlast),
-	.m_axis_tuser (m_axis_tx_tuser),
-	.*
-);
+//	// data out(eth)
+//	.m_aclk(clk156),
+//	.m_axis_tvalid(m_axis_tx_tvalid),
+//	.m_axis_tready(m_axis_tx_tready),
+//	.m_axis_tdata (m_axis_tx_tdata),
+//	.m_axis_tkeep (m_axis_tx_tkeep),
+//	.m_axis_tlast (m_axis_tx_tlast),
+//	.m_axis_tuser (m_axis_tx_tuser),
+//	.*
+//);
 
 axi_10g_ethernet_0 axi_10g_ethernet_0_ins (
 	.coreclk_out(clk156),
@@ -163,12 +164,12 @@ axi_10g_ethernet_0 axi_10g_ethernet_0_ins (
 	.resetdone_out(),
 
 	// eth tx
-	.s_axis_tx_tready(m_axis_tx_tready),
-	.s_axis_tx_tdata (m_axis_tx_tdata),
-	.s_axis_tx_tkeep (m_axis_tx_tkeep),
-	.s_axis_tx_tlast (m_axis_tx_tlast),
-	.s_axis_tx_tvalid(m_axis_tx_tvalid),
-	.s_axis_tx_tuser (m_axis_tx_tuser),
+//	.s_axis_tx_tready(m_axis_tx_tready),
+//	.s_axis_tx_tdata (m_axis_tx_tdata),
+//	.s_axis_tx_tkeep (m_axis_tx_tkeep),
+//	.s_axis_tx_tlast (m_axis_tx_tlast),
+//	.s_axis_tx_tvalid(m_axis_tx_tvalid),
+//	.s_axis_tx_tuser (m_axis_tx_tuser),
 	
 	// eth rx
 	.m_axis_rx_tdata(),
