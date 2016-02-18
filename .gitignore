@@ -86,8 +86,8 @@
 !*.xmp
 
 # sora
-wrk/*/*.jou
-wrk/*/*.cache
-wrk/*/*.runs
+*.jou
+*.cache
+*.runs
 
 
