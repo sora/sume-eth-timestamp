@@ -68,7 +68,7 @@ always_comb begin
 	tx_pkt.hdr.ip.frag_off = 0;
 	tx_pkt.hdr.ip.ttl = IPDEFTTL;
 	tx_pkt.hdr.ip.protocol = IP4_PROTO_UDP;
-	tx_pkt.hdr.ip.saddr = ip_saddr;
+//	tx_pkt.hdr.ip.saddr = ip_saddr;
 	tx_pkt.hdr.ip.daddr = ip_daddr;
 	tx_pkt.hdr.ip.check = ipcheck_gen();
 
@@ -78,37 +78,77 @@ always_comb begin
 	tx_pkt.hdr.udp.check = 0;
 end
 
-logic [27:0] counter;      //Internal counter: 156,25MHz / 2^25 = 4,656 Hz: Packet sending frequency.
-logic [31:0] packet_c;
-logic [63:0] s_axis_tx_tdata_rev;
-always_comb begin
-	if (counter < 8)
-		s_axis_tx_tdata_rev = tx_pkt.raw[7 - counter];
-	else
-		s_axis_tx_tdata_rev = 64'b0;
-end
-
+// txcnt
+logic [27:0] txcnt;
+enum bit { TX_IDLE, TX_SEND } tx_state = TX_IDLE;
+logic [31:0] saddr;
 always_ff @(posedge clk156) begin
 	if (reset) begin
-		counter <= 28'b0;
-		packet_c <= 32'b0;
+		txcnt <= 0;
+		tx_state <= TX_IDLE;
+		saddr <= 0;
 	end else begin
-        // packet counter
-		if (counter == 9)
-			packet_c <= packet_c + 1;
-		
-		// count up	
-		counter <= counter + 1;
-        if (counter == 28'd15625000)
-            counter <= 0;
+		case (tx_state)
+			TX_IDLE: begin
+				txcnt <= 0;
+				if (s_axis_tx_tready) begin
+					tx_state <= TX_SEND;
+					saddr <= saddr + 1;
+				end
+			end
+			TX_SEND: begin
+				txcnt <= txcnt + 1;
+				if (txcnt == 7)
+					tx_state <= TX_IDLE;
+			end
+		endcase
+	end
+end
+always_comb tx_pkt.hdr.ip.saddr = saddr;
 
+// tdata
+logic [63:0] s_axis_tx_tdata_rev;
+always_comb begin
+	if (tx_state == TX_SEND) begin
+		case (txcnt)
+			27'h0: s_axis_tx_tdata_rev = tx_pkt.raw[7];
+			27'h1: s_axis_tx_tdata_rev = tx_pkt.raw[6];
+			27'h2: s_axis_tx_tdata_rev = tx_pkt.raw[5];
+			27'h3: s_axis_tx_tdata_rev = tx_pkt.raw[4];
+			27'h4: s_axis_tx_tdata_rev = tx_pkt.raw[3];
+			27'h5: s_axis_tx_tdata_rev = tx_pkt.raw[2];
+			27'h6: s_axis_tx_tdata_rev = tx_pkt.raw[1];
+			27'h7: s_axis_tx_tdata_rev = tx_pkt.raw[0];
+			default:
+				s_axis_tx_tdata_rev = 64'b0;
+		endcase
+	end
+end
+always_comb s_axis_tx_tdata = endian_conv64(s_axis_tx_tdata_rev);
+
+// tkeep
+always_comb begin
+	if (tx_state == TX_SEND) begin
+		case (txcnt)
+			27'h0: s_axis_tx_tkeep = 8'b1111_1111;
+			27'h1: s_axis_tx_tkeep = 8'b1111_1111;
+			27'h2: s_axis_tx_tkeep = 8'b1111_1111;
+			27'h3: s_axis_tx_tkeep = 8'b1111_1111;
+			27'h4: s_axis_tx_tkeep = 8'b1111_1111;
+			27'h5: s_axis_tx_tkeep = 8'b1111_1111;
+			27'h6: s_axis_tx_tkeep = 8'b1111_1111;
+			27'h7: s_axis_tx_tkeep = 8'b0000_1111;
+			default:
+				s_axis_tx_tkeep = 8'b0;
+		endcase
 	end
 end
 
-// output ports
-always_comb s_axis_tx_tdata  = endian_conv64(s_axis_tx_tdata_rev);
-always_comb s_axis_tx_tkeep  = (counter < 7) ? 8'hFF : (counter == 7) ? 8'b0000_1111 : 8'b0;
-always_comb s_axis_tx_tlast  = (counter == 7);
-always_comb s_axis_tx_tvalid = (counter < 8);
+// tlast
+always_comb s_axis_tx_tlast = (txcnt == 7);
+
+// tvalid
+always_comb s_axis_tx_tvalid = (tx_state == TX_SEND);
 
 endmodule
+
