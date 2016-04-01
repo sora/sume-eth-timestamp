@@ -5,6 +5,9 @@ import udp_pkg::*;
 
 module eth_send #(
 	parameter frame_len = 16'd60,
+	
+	parameter frame_len_width = (frame_len + ETH_FCS_LEN) / 8,
+	parameter frame_len_term_bit = frame_len % 8,
 
 //    parameter eth_dst   = 48'hFF_FF_FF_FF_FF_FF,
 	parameter eth_dst   = 48'h90_E2_BA_5D_8D_C8,
@@ -97,7 +100,8 @@ always_ff @(posedge clk156) begin
 				end
 			end
 			TX_SEND: begin
-				txcnt <= txcnt + 1;
+				if (s_axis_tx_tready)
+					txcnt <= txcnt + 1;
 				if (txcnt == 7)
 					tx_state <= TX_IDLE;
 			end
@@ -107,41 +111,37 @@ end
 always_comb tx_pkt.hdr.ip.saddr = saddr;
 
 // tdata
-logic [63:0] s_axis_tx_tdata_rev;
+logic [63:0] s_axis_tx_tdata_reg;
 always_comb begin
-	if (tx_state == TX_SEND) begin
-		case (txcnt)
-			27'h0: s_axis_tx_tdata_rev = tx_pkt.raw[7];
-			27'h1: s_axis_tx_tdata_rev = tx_pkt.raw[6];
-			27'h2: s_axis_tx_tdata_rev = tx_pkt.raw[5];
-			27'h3: s_axis_tx_tdata_rev = tx_pkt.raw[4];
-			27'h4: s_axis_tx_tdata_rev = tx_pkt.raw[3];
-			27'h5: s_axis_tx_tdata_rev = tx_pkt.raw[2];
-			27'h6: s_axis_tx_tdata_rev = tx_pkt.raw[1];
-			27'h7: s_axis_tx_tdata_rev = tx_pkt.raw[0];
-			default:
-				s_axis_tx_tdata_rev = 64'b0;
-		endcase
-	end
+	case (txcnt)
+		27'h0: s_axis_tx_tdata_reg = tx_pkt.raw[7];
+		27'h1: s_axis_tx_tdata_reg = tx_pkt.raw[6];
+		27'h2: s_axis_tx_tdata_reg = tx_pkt.raw[5];
+		27'h3: s_axis_tx_tdata_reg = tx_pkt.raw[4];
+		27'h4: s_axis_tx_tdata_reg = tx_pkt.raw[3];
+		27'h5: s_axis_tx_tdata_reg = tx_pkt.raw[2];
+		27'h6: s_axis_tx_tdata_reg = tx_pkt.raw[1];
+		27'h7: s_axis_tx_tdata_reg = tx_pkt.raw[0];
+		default:
+			s_axis_tx_tdata_reg = 64'b0;
+	endcase
 end
-always_comb s_axis_tx_tdata = endian_conv64(s_axis_tx_tdata_rev);
+always_comb s_axis_tx_tdata = endian_conv64(s_axis_tx_tdata_reg);
 
 // tkeep
 always_comb begin
-	if (tx_state == TX_SEND) begin
-		case (txcnt)
-			27'h0: s_axis_tx_tkeep = 8'b1111_1111;
-			27'h1: s_axis_tx_tkeep = 8'b1111_1111;
-			27'h2: s_axis_tx_tkeep = 8'b1111_1111;
-			27'h3: s_axis_tx_tkeep = 8'b1111_1111;
-			27'h4: s_axis_tx_tkeep = 8'b1111_1111;
-			27'h5: s_axis_tx_tkeep = 8'b1111_1111;
-			27'h6: s_axis_tx_tkeep = 8'b1111_1111;
-			27'h7: s_axis_tx_tkeep = 8'b0000_1111;
-			default:
-				s_axis_tx_tkeep = 8'b0;
-		endcase
-	end
+	case (txcnt)
+		27'h0: s_axis_tx_tkeep = 8'b1111_1111;
+		27'h1: s_axis_tx_tkeep = 8'b1111_1111;
+		27'h2: s_axis_tx_tkeep = 8'b1111_1111;
+		27'h3: s_axis_tx_tkeep = 8'b1111_1111;
+		27'h4: s_axis_tx_tkeep = 8'b1111_1111;
+		27'h5: s_axis_tx_tkeep = 8'b1111_1111;
+		27'h6: s_axis_tx_tkeep = 8'b1111_1111;
+		27'h7: s_axis_tx_tkeep = 8'b0000_1111;
+		default:
+			s_axis_tx_tkeep = 8'b0;
+	endcase
 end
 
 // tlast
