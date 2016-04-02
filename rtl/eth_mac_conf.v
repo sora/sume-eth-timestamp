@@ -11,7 +11,7 @@ module eth_mac_conf #(
     assign mac_tx_configuration_vector [79:32] = SRC_MAC;
     assign mac_tx_configuration_vector [30:16] = 1518;
     assign mac_tx_configuration_vector [14] = 0;
-    assign mac_tx_configuration_vector [10] = 2;  // DIC enable
+    assign mac_tx_configuration_vector [10] = 0;  // DIC enable
     assign mac_tx_configuration_vector [9] = 0;
     assign mac_tx_configuration_vector [8] = 0;
     assign mac_tx_configuration_vector [7] = 0;
