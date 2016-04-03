@@ -89,5 +89,6 @@
 *.jou
 *.cache
 *.runs
+!*.sh
 
 
