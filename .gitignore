@@ -90,5 +90,5 @@
 *.cache
 *.runs
 !*.sh
-
+!Makefile
 
